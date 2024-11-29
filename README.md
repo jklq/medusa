@@ -23,7 +23,7 @@ func main() {
 	b.Source("./src")
 	b.Destination("./build")
 
-    // add values to global store
+	// add values to global store
 	b.Use(metadata.New(
 		map[string]any{
 			"title":       "My Blog",
@@ -31,7 +31,7 @@ func main() {
 		},
 	))
 
-    // adds "collections" to global store
+	// adds "collections" to global store
 	b.Use(collections.New(collections.CollectionConfig{
 		Name: "blog",
 		Store: map[string]any{
@@ -40,16 +40,16 @@ func main() {
 		Patterns: []string{"blog/*.md"},
 	}))
 
-    // transpile all md to html
+	// transpile all md to html
 	b.Use(markdown.New())
 
-    // apply layouts to content
+	// apply layouts to content
 	b.Use(layouts.New(layouts.Config{
 		LayoutPatterns:  []string{"template/*"},
 		ContentPatterns: []string{"**/*.html"},
 	}))
 
-    // run all transformer fnuctions
+	// run all transformer fnuctions
 	err := b.Build()
 	if err != nil {
 		panic(err)
