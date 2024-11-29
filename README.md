@@ -1,8 +1,8 @@
-# medusa
-
 > **WARNING**: This package is still in it's infancy.
 > Breaking features/fixes will be introduced
 > and bugs will be prevalent.
+
+# medusa
 
 > a static site generator based on transformer functions
 
