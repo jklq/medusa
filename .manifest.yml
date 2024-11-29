@@ -1,0 +1,11 @@
+image: alpine/edge
+secrets:
+  - 2d3822b8-ab11-47b9-b11c-642efce4aba0
+environment:
+  REPO: medusa
+  GH_USER: jklq
+tasks:
+  - mirror-to-github: |
+      cd ~/"${REPO}"
+      git config --global credential.helper store
+      git push --mirror "https://github.com/${GH_USER}/${REPO}"
