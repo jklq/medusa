@@ -1,5 +1,5 @@
-//go:build integration
-// +build integration
+//go:build !integration
+// +build !integration
 
 package medusa
 
@@ -14,6 +14,57 @@ import (
 	"testing"
 	"time"
 )
+
+func TestPassthrough(t *testing.T) {
+	source := "./src"
+	destination := "./build"
+
+	noExistingDirs(t, source, destination)
+
+	err := generateSource(source)
+	if err != nil {
+		panic(err)
+	}
+
+	b := NewBuilder()
+	b.Source(source)
+	b.Destination(destination)
+	b.Use(func(f *[]File, s *Store) error {
+		var fileStoreIndex int
+		for i, file := range *f {
+			if strings.HasSuffix(file.Path, "0.md") {
+				fileStoreIndex = i
+				(*f)[i].SetContent([]byte("This is the first file."))
+				(*f)[i].Store["test"] = "exists"
+			}
+		}
+		(*s)["test"] = fileStoreIndex
+		return nil
+	})
+	b.Use(func() Transformer {
+		return func(f *[]File, s *Store) error {
+			i, ok := (*s)["test"].(int)
+			if !ok {
+				t.Fatalf("store value not passed on correctly")
+			}
+
+			value, ok := (*f)[i].Store["test"]
+			if !ok || value != "exists" {
+				t.Fatalf("store value not passed on correctly")
+			}
+			return nil
+		}
+
+	}())
+
+	err = b.Build()
+
+	if err != nil {
+		t.Fatalf("err != nil: %v", err)
+	}
+	compareFileState(t, b.files, destination)
+	removeDirs(source, destination)
+}
 
 type dummyFileInfo struct{}
 
@@ -85,55 +136,4 @@ func compareFileState(t *testing.T, files []File, destination string) {
 		}
 
 	}
-}
-
-func TestPassthrough(t *testing.T) {
-	source := "./src"
-	destination := "./build"
-
-	noExistingDirs(t, source, destination)
-
-	err := generateSource(source)
-	if err != nil {
-		panic(err)
-	}
-
-	b := NewBuilder()
-	b.Source(source)
-	b.Destination(destination)
-	b.Use(func(f *[]File, s *Store) error {
-		var fileStoreIndex int
-		for i, file := range *f {
-			if strings.HasSuffix(file.Path, "0.md") {
-				fileStoreIndex = i
-				(*f)[i].SetContent([]byte("This is the first file."))
-				(*f)[i].Store["test"] = "exists"
-			}
-		}
-		(*s)["test"] = fileStoreIndex
-		return nil
-	})
-	b.Use(func() Transformer {
-		return func(f *[]File, s *Store) error {
-			i, ok := (*s)["test"].(int)
-			if !ok {
-				t.Fatalf("store value not passed on correctly")
-			}
-
-			value, ok := (*f)[i].Store["test"]
-			if !ok || value != "exists" {
-				t.Fatalf("store value not passed on correctly")
-			}
-			return nil
-		}
-
-	}())
-
-	err = b.Build()
-
-	if err != nil {
-		t.Fatalf("err != nil: %v", err)
-	}
-	compareFileState(t, b.files, destination)
-	removeDirs(source, destination)
 }
