@@ -46,7 +46,6 @@ func TestCollectionBasicPatternMatching(t *testing.T) {
 	files := []medusa.File{
 		createTestFile(t, "posts/post1.md", "content1", time.Now()),
 		createTestFile(t, "posts/post2.md", "content2", time.Now()),
-
 		createTestFile(t, "pages/page1.md", "content3", time.Now()),
 	}
 
@@ -61,13 +60,9 @@ func TestCollectionBasicPatternMatching(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection, ok := store["posts"].(Collection)
-	if !ok {
-		t.Fatal("posts collection not found in store")
-	}
-
+	collection := store["collections"].(Collections)["posts"]
 	if len(collection.Files) != 2 {
-		t.Errorf("expected 2 files in posts collection, got %d", len(collection.Files))
+		t.Fatalf("expected 2 files, got %d", len(collection.Files))
 	}
 }
 
@@ -94,7 +89,7 @@ func TestCollectionWithCustomSorting(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["posts"].(Collection)
+	collection := store["collections"].(Collections)["posts"]
 	if len(collection.Files) != 3 {
 		t.Fatalf("expected 3 files, got %d", len(collection.Files))
 	}
@@ -111,7 +106,41 @@ func TestCollectionWithCustomSorting(t *testing.T) {
 	}
 }
 
-func TestCollectionWithMetadata(t *testing.T) {
+func TestCollectionWithCustomFilter(t *testing.T) {
+	now := time.Now()
+	files := []medusa.File{
+		createTestFile(t, "posts/post2.md", "content2", now.Add(-1*time.Hour)),
+		createTestFile(t, "posts/post3.md", "content3", now.Add(-5*time.Hour)),
+		createTestFile(t, "posts/post1.md", "content1", now.Add(-2*time.Hour)),
+		createTestFile(t, "posts/snoozepost1.md", "content1", now.Add(-2*time.Hour)),
+		createTestFile(t, "posts/snoozepost2.md", "content1", now.Add(-2*time.Hour)),
+		createTestFile(t, "posts/snoozepost3.md", "content1", now.Add(-2*time.Hour)),
+		createTestFile(t, "posts/snoozepost4.md", "content1", now.Add(-2*time.Hour)),
+		createTestFile(t, "posts/snooze.md", "content1", now.Add(-2*time.Hour)),
+	}
+
+	store := make(medusa.Store)
+	transformer := New(CollectionConfig{
+		Name:     "posts",
+		Patterns: []string{"posts/*.md"},
+		FilterFunc: func(file medusa.File) bool {
+			return !strings.Contains(file.Path, "snooze")
+		},
+		DontReverse: true,
+	})
+
+	err := transformer(&files, &store)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	collection := store["collections"].(Collections)["posts"]
+	if len(collection.Files) != 3 {
+		t.Fatalf("expected 3 files, got %d", len(collection.Files))
+	}
+}
+
+func TestCollectionWithStore(t *testing.T) {
 	files := []medusa.File{
 		createTestFile(t, "posts/post1.md", "content1", time.Now()),
 	}
@@ -131,7 +160,7 @@ func TestCollectionWithMetadata(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["posts"].(Collection)
+	collection := store["collections"].(Collections)["posts"]
 	if collection.Store["description"] != "Blog posts" {
 		t.Error("metadata not properly set in collection store")
 	}
@@ -154,7 +183,7 @@ func TestCollectionWithContentInclusion(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["posts"].(Collection)
+	collection := store["collections"].(Collections)["posts"]
 	if collection.Files[0].Content == nil {
 		t.Error("content not included despite IncludeContent being true")
 	}
@@ -178,7 +207,7 @@ func TestCollectionWithMultiplePatterns(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["writings"].(Collection)
+	collection := store["collections"].(Collections)["writings"]
 	if len(collection.Files) != 2 {
 		t.Errorf("expected 2 files matching multiple patterns, got %d", len(collection.Files))
 	}
@@ -195,7 +224,7 @@ func TestCollectionValidation(t *testing.T) {
 			config: CollectionConfig{
 				Patterns: []string{"*.md"},
 			},
-			wantErr: ErrNoPattern,
+			wantErr: ErrNoName,
 		},
 		{
 			name: "missing patterns",

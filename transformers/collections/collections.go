@@ -30,7 +30,7 @@ type CollectionConfig struct {
 	// +1 if a > b.
 	SortBy func(a medusa.File, b medusa.File) int
 
-	FilterBy func(file medusa.File) bool
+	FilterFunc func(file medusa.File) bool
 
 	// Don't reverse.
 	// By default it is false.
@@ -82,8 +82,8 @@ func defaultCollectionCfg(cfg *CollectionConfig) error {
 			return a.FileInfo.ModTime().Compare(b.FileInfo.ModTime())
 		}
 	}
-	if cfg.FilterBy == nil {
-		cfg.FilterBy = func(file medusa.File) bool { return true }
+	if cfg.FilterFunc == nil {
+		cfg.FilterFunc = func(file medusa.File) bool { return true }
 	}
 	return nil
 }
@@ -128,7 +128,7 @@ func New(collectionCfgs ...CollectionConfig) medusa.Transformer {
 				if err != nil {
 					return err
 				}
-				if !match {
+				if !match || !cfg.FilterFunc(file) {
 					continue
 				}
 
