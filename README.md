@@ -64,4 +64,4 @@ This project is heaviliy inspired by and modelled after [Metalsmith](https://git
 
 ## Support
 
-You can submit issues at https://todo.sr.ht/~replay/medusa or send an email to ~relay/medusa@lists.sr.ht to submit patches or ask questions.
+Please feel free to send an email to ~relay/medusa@lists.sr.ht to submit patches or ask questions.
