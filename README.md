@@ -49,7 +49,7 @@ func main() {
 		ContentPatterns: []string{"**/*.html"},
 	}))
 
-	// run all transformer fnuctions
+	// run all transformer functions
 	err := b.Build()
 	if err != nil {
 		panic(err)
