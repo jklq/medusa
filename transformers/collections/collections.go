@@ -102,11 +102,11 @@ func fileMatchesPatterns(patterns []string, file medusa.File) (bool, error) {
 	return matchOne, nil
 }
 
-// Adds a "collections" key to global store.
+// Adds a "Collections" key to global store.
 // The value is of type [Collections].
 func New(collectionCfgs ...CollectionConfig) medusa.Transformer {
 	return func(files *[]medusa.File, store *medusa.Store) error {
-		collections, ok := (*store)["collections"].(Collections)
+		collections, ok := (*store)["Collections"].(Collections)
 
 		if !ok {
 			collections = Collections{}
@@ -160,7 +160,7 @@ func New(collectionCfgs ...CollectionConfig) medusa.Transformer {
 			}
 		}
 
-		(*store)["collections"] = collections
+		(*store)["Collections"] = collections
 		return nil
 	}
 }

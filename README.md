@@ -31,9 +31,9 @@ func main() {
 		},
 	))
 
-	// adds "collections" to global store
+	// adds "Collections" to global store
 	b.Use(collections.New(collections.CollectionConfig{
-		Name: "blog",
+		Name: "Blog",
 		Store: map[string]any{
 			"heading": "My awesome posts!",
 		},

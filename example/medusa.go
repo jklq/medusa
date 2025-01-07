@@ -25,15 +25,15 @@ func main() {
 
 	b.Use(metadata.New(
 		map[string]any{
-			"title":       "My Blog",
-			"description": "The blog where I blog.",
+			"Title":       "My Blog",
+			"Description": "The blog where I blog.",
 		},
 	))
 
 	b.Use(collections.New(collections.CollectionConfig{
-		Name: "blog",
+		Name: "Blog",
 		Store: map[string]any{
-			"heading": "My awesome posts!",
+			"Heading": "My awesome posts!",
 		},
 		Patterns: []string{"blog/*.md"},
 	}))
@@ -42,7 +42,7 @@ func main() {
 
 	b.Use(layouts.New(layouts.Config{
 		LayoutPatterns:  []string{"template/*"},
-		ContentPatterns: []string{"**/*.html"},
+		ContentPatterns: []string{"*.html"},
 	}))
 
 	err := b.Build()

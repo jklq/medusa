@@ -60,7 +60,7 @@ func TestCollectionBasicPatternMatching(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["collections"].(Collections)["posts"]
+	collection := store["Collections"].(Collections)["posts"]
 	if len(collection.Files) != 2 {
 		t.Fatalf("expected 2 files, got %d", len(collection.Files))
 	}
@@ -89,7 +89,7 @@ func TestCollectionWithCustomSorting(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["collections"].(Collections)["posts"]
+	collection := store["Collections"].(Collections)["posts"]
 	if len(collection.Files) != 3 {
 		t.Fatalf("expected 3 files, got %d", len(collection.Files))
 	}
@@ -134,7 +134,7 @@ func TestCollectionWithCustomFilter(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["collections"].(Collections)["posts"]
+	collection := store["Collections"].(Collections)["posts"]
 	if len(collection.Files) != 3 {
 		t.Fatalf("expected 3 files, got %d", len(collection.Files))
 	}
@@ -160,7 +160,7 @@ func TestCollectionWithStore(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["collections"].(Collections)["posts"]
+	collection := store["Collections"].(Collections)["posts"]
 	if collection.Store["description"] != "Blog posts" {
 		t.Error("metadata not properly set in collection store")
 	}
@@ -183,7 +183,7 @@ func TestCollectionWithContentInclusion(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["collections"].(Collections)["posts"]
+	collection := store["Collections"].(Collections)["posts"]
 	if collection.Files[0].Content == nil {
 		t.Error("content not included despite IncludeContent being true")
 	}
@@ -207,7 +207,7 @@ func TestCollectionWithMultiplePatterns(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	collection := store["collections"].(Collections)["writings"]
+	collection := store["Collections"].(Collections)["writings"]
 	if len(collection.Files) != 2 {
 		t.Errorf("expected 2 files matching multiple patterns, got %d", len(collection.Files))
 	}
