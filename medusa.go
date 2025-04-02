@@ -16,7 +16,7 @@ type Builder struct {
 	destination     string
 	transformers    []Transformer
 	files           []File
-	log             slog.Logger
+	log             *slog.Logger
 	skipFrontmatter bool
 
 	autoConfirm bool
@@ -38,13 +38,29 @@ func ErrTransformer(err error) Transformer {
 
 // Creates a new builder struct.
 // The config parameter is optional.
-// If more than one configs are passed, it uses the first one.
+// If more than one config is passed, it uses the first one.
+// Defaults are applied based on Go's zero values where applicable:
+// - WorkingDir: Defaults to "./" if empty.
+// - AutoConfirm: Defaults to false.
+// - Logger: Defaults to a discard logger if nil.
+// - SkipFrontmatterParsing: Defaults to false.
 func NewBuilder(optionalConfig ...Config) *Builder {
-	config := configDefault(optionalConfig...)
+	var config Config
+	if len(optionalConfig) > 0 {
+		config = optionalConfig[0]
+	}
+
+	// Apply defaults for fields where zero value isn't the desired default
+	if config.WorkingDir == "" {
+		config.WorkingDir = "./"
+	}
+	if config.Logger == nil {
+		config.Logger = slog.New(discardHandler{})
+	}
 
 	return &Builder{
 		workingDir:      config.WorkingDir,
-		log:             *config.Logger,
+		log:             config.Logger,
 		skipFrontmatter: config.SkipFrontmatterParsing,
 		autoConfirm:     config.AutoConfirm,
 	}

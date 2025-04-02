@@ -9,44 +9,46 @@ type Config struct {
 	// It is used to find the source and
 	// destination directory.
 	//
-	// Optional. Defaults to: "./"
+	// Optional. Defaults to the current directory ("./") if empty.
 	WorkingDir string
 
-	// Wheter prompts like
+	// Whether prompts like
 	// "overwrite warnings" should be skipped.
 	//
-	// Optional. Defaults to: false
+	// Optional. Defaults to false.
 	AutoConfirm bool
 
-	// Defines which logger to use
+	// Defines which logger to use.
 	//
-	// Optional.
+	// Optional. Defaults to a discard logger if nil.
 	Logger *slog.Logger
 
-	// Wheter frontmatter parsing should be skipped
+	// Whether frontmatter parsing should be skipped.
 	//
-	// Optional. Defaults to false
+	// Optional. Defaults to false.
 	SkipFrontmatterParsing bool
 }
 
 // Helper function to set default values
-func configDefault(optionalConfig ...Config) Config {
-	var config Config
+// DEPRECATED: Defaults are now handled directly in NewBuilder using Go's
+// zero values where appropriate.
+// func configDefault(optionalConfig ...Config) Config {
+// 	var config Config
 
-	if len(optionalConfig) == 0 {
-		config = Config{}
-	} else {
-		config = optionalConfig[0]
-	}
+// 	if len(optionalConfig) == 0 {
+// 		config = Config{}
+// 	} else {
+// 		config = optionalConfig[0]
+// 	}
 
-	if config.Logger == nil {
-		config.Logger = slog.New(discardHandler{})
-	}
+// 	if config.Logger == nil {
+// 		config.Logger = slog.New(discardHandler{})
+// 	}
 
-	// Set WorkingDir default value
-	if config.WorkingDir == "" {
-		config.WorkingDir = "./"
-	}
+// 	// Set WorkingDir default value
+// 	if config.WorkingDir == "" {
+// 		config.WorkingDir = "./"
+// 	}
 
-	return config
-}
+// 	return config
+// }

@@ -9,25 +9,46 @@ sequencially. At the end of the chain, it writes the state of the
 
 Each file also has a Frontmatter field where yaml/toml/json
 frontmatter is parsed and stored. The builder returns [ErrFrontmatter]
-if it failes to parse fronmatter of a file.
+if it failes to parse fronmatter of a file. Frontmatter parsing can
+be skipped via [Config].
+
+Configuration defaults generally rely on Go's zero values (e.g., false for
+booleans, nil for pointers, "" for strings), with specific overrides in
+[NewBuilder] for fields like WorkingDir (defaults to "./") and Logger
+(defaults to a discard logger).
 
 # Example Usage
 
 	package main
 
-	package main
-
 	import (
-		"context"
-		"git.sr.ht/~relay/medusa/pkg/medusa"
+		"log"
+		"log/slog"
+		"os"
+
+		"git.sr.ht/~relay/medusa"
 	)
 
 	func main() {
-		b := medusa.NewBuilder()
+		// Example with custom configuration
+		config := medusa.Config{
+			Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				Level: slog.LevelDebug,
+			})),
+			AutoConfirm: true, // Skip overwrite prompts
+		}
+		b := medusa.NewBuilder(config)
+
+		// Example with default configuration
+		// b := medusa.NewBuilder()
+
 		b.Source("./src")
 		b.Destination("./build")
 
-		err := b.Build(context.Background())
+		// Add transformers if needed
+		// b.Use(...)
+
+		err := b.Build()
 		if err != nil {
 			panic(err)
 		}
