@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"path/filepath"
 	"strings"
 
@@ -15,13 +14,14 @@ import (
 var (
 	ErrNoLayoutPattern  = errors.New("no layout pattern specified")
 	ErrNoContentPattern = errors.New("no content pattern specified")
-	ErrNoLayouts        = errors.New("no layouts in specified patterns")
+	ErrNoLayouts        = errors.New("no layouts found matching specified patterns")
+	ErrNoDefaultLayout  = errors.New("no default layout found and no layouts available to choose from")
 )
 
 type ErrInvalidLayoutName struct{ path string }
 
 func (e ErrInvalidLayoutName) Error() string {
-	return fmt.Sprintf("invalid layout value at: %v", e.path)
+	return fmt.Sprintf("invalid layout value (must be a string) in frontmatter for: %v", e.path)
 }
 
 type ErrLayoutNotFound struct {
@@ -30,11 +30,13 @@ type ErrLayoutNotFound struct {
 }
 
 func (e ErrLayoutNotFound) Error() string {
-	return fmt.Sprintf("did not find layout \"%v\" as defined in: %v", e.layout, e.path)
+	return fmt.Sprintf("layout \"%v\" not found (referenced in: %v)", e.layout, e.path)
 }
 
 type Config struct {
-	LayoutPatterns  []string
+	// Glob patterns to identify layout and partial files.
+	LayoutPatterns []string
+	// Glob patterns to identify content files that need layout application.
 	ContentPatterns []string
 }
 
@@ -43,27 +45,29 @@ func fileMatchesPatterns(patterns []string, file medusa.File) (bool, error) {
 	for _, pattern := range patterns {
 		match, err := filepath.Match(pattern, file.Path)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("invalid pattern '%s': %w", pattern, err)
 		}
 		if match {
 			matchOne = true
+			break // Found a match, no need to check further patterns
 		}
 	}
 	return matchOne, nil
 }
 
-// The data accessible from the template
+// TemplateData is the data structure accessible from within the templates.
 type TemplateData struct {
-	// Local file struct
+	// File holds metadata and frontmatter for the current content file.
 	File medusa.File
 
-	// Global store
+	// Global provides access to the shared data store.
 	Global medusa.Store
 
+	// Content is the rendered HTML content of the current file.
+	// It's marked as template.HTML to prevent double-escaping.
 	Content template.HTML
 }
 
-// Creates a the layout transformer
 func New(cfg Config) medusa.Transformer {
 	return func(files *[]medusa.File, store *medusa.Store) error {
 		if len(cfg.LayoutPatterns) == 0 {
@@ -73,97 +77,110 @@ func New(cfg Config) medusa.Transformer {
 			return ErrNoContentPattern
 		}
 
-		var layouts = map[string]*template.Template{}
-		var i = 0
+		masterTmpl := template.New("")
+		var layoutFiles []medusa.File
+		var contentFiles []medusa.File
+		var defaultLayoutName string
+		var lastLayoutName string
 
-		var defaultLayout *template.Template
-		var layoutDefaultFound bool
-		var selectedLayout *template.Template
-		for i < len(*files) {
-			file := &((*files)[i])
-
-			match, err := fileMatchesPatterns(cfg.LayoutPatterns, *file)
-			if err != nil {
-				return err
-			}
-			if !match {
-				i++
-				continue
-			}
-
-			layoutName := file.Path
-
-			selectedLayout, err = template.New(layoutName).Parse(string(file.Content()))
+		// Pass 1: Separate files and parse layouts
+		remainingFiles := (*files)[:0]
+		for _, file := range *files {
+			isLayout, err := fileMatchesPatterns(cfg.LayoutPatterns, file)
 			if err != nil {
 				return err
 			}
 
-			if strings.HasPrefix(file.FileInfo.Name(), "default") {
-				layoutDefaultFound = true
-				defaultLayout = selectedLayout
+			if isLayout {
+				layoutFiles = append(layoutFiles, file)
+				layoutName := file.Path
+
+				_, err := masterTmpl.New(layoutName).Parse(string(file.Content()))
+				if err != nil {
+					return fmt.Errorf("failed to parse layout/partial '%s': %w", layoutName, err)
+				}
+
+				if strings.HasPrefix(filepath.Base(file.Path), "default.") {
+					if defaultLayoutName == "" {
+						defaultLayoutName = layoutName
+					}
+				}
+				lastLayoutName = layoutName
+			} else {
+				isContent, err := fileMatchesPatterns(cfg.ContentPatterns, file)
+				if err != nil {
+					return err
+				}
+
+				if isContent {
+					contentFiles = append(contentFiles, file)
+				} else {
+					remainingFiles = append(remainingFiles, file)
+				}
 			}
-
-			layouts[layoutName] = selectedLayout
-
-			(*files)[i] = (*files)[len(*files)-1]
-			(*files) = (*files)[:len(*files)-1]
 		}
-		if !layoutDefaultFound {
-			defaultLayout = selectedLayout
-		}
+		*files = remainingFiles
 
-		if len(layouts) == 0 {
-			return ErrNoLayouts
-		}
-		for i := range *files {
-			file := &((*files)[i])
-
-			match, err := fileMatchesPatterns(cfg.ContentPatterns, *file)
-			if err != nil {
-				return err
+		if len(layoutFiles) == 0 {
+			needsLayout := false
+			for _, contentFile := range contentFiles {
+				_, hasLayoutKey := contentFile.Frontmatter["layout"]
+				if len(contentFiles) > 0 || hasLayoutKey {
+					needsLayout = true
+					break
+				}
 			}
-			if !match {
-				i++
-				continue
+			if needsLayout {
+				return ErrNoLayouts
 			}
+			*files = append(*files, contentFiles...)
+			return nil
+		}
 
-			layout := defaultLayout
+		if defaultLayoutName == "" {
+			if lastLayoutName == "" {
+				return ErrNoDefaultLayout
+			}
+			defaultLayoutName = lastLayoutName
+		}
+
+		// Pass 2: Process content files
+		processedContentFiles := make([]medusa.File, 0, len(contentFiles))
+		for _, file := range contentFiles {
+			targetLayoutName := defaultLayoutName
 
 			if name, ok := file.Frontmatter["layout"]; ok {
-				layoutName, ok := name.(string)
+				layoutNameStr, ok := name.(string)
 				if !ok {
-					return ErrInvalidLayoutName{file.Path}
+					return ErrInvalidLayoutName{path: file.Path}
 				}
-
-				layout, ok = layouts[layoutName]
-				if !ok {
-					return ErrLayoutNotFound{layoutName, file.Path}
-				}
+				targetLayoutName = layoutNameStr
 			}
 
-			var templateData TemplateData
+			if masterTmpl.Lookup(targetLayoutName) == nil {
+				if targetLayoutName == defaultLayoutName {
+					return fmt.Errorf("default layout '%s' (required by '%s') not found or failed to parse", defaultLayoutName, file.Path)
+				}
+				return ErrLayoutNotFound{layout: targetLayoutName, path: file.Path}
+			}
 
-			templateData.File = *file
-			templateData.Global = *store
-			templateData.Content = template.HTML(file.Content())
+			templateData := TemplateData{
+				File:    file,
+				Global:  *store,
+				Content: template.HTML(file.Content()),
+			}
 
 			var newContentBuffer bytes.Buffer
-
-			err = layout.Execute(&newContentBuffer, templateData)
-
+			err := masterTmpl.ExecuteTemplate(&newContentBuffer, targetLayoutName, templateData)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to execute layout '%s' for file '%s': %w", targetLayoutName, file.Path, err)
 			}
 
-			newContent, err := io.ReadAll(&newContentBuffer)
-
-			if err != nil {
-				return err
-			}
-
-			file.SetContent(newContent)
-
+			file.SetContent(newContentBuffer.Bytes())
+			processedContentFiles = append(processedContentFiles, file)
 		}
+
+		*files = append(*files, processedContentFiles...)
 
 		return nil
 	}

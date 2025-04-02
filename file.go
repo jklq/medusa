@@ -18,11 +18,6 @@ func (e ErrFrontmatter) Error() string {
 	return fmt.Sprintf("failed to parse frontmatter at: %v", e.path)
 }
 
-// future max size to load into memory?
-// or maybe a user specified option?
-// or based on free memory?
-// const maxInMemorySize = 100 * 1024 * 1024 // 100MB
-
 type File struct {
 	Path     string
 	FileInfo fs.FileInfo
@@ -64,7 +59,7 @@ func (b *Builder) srcWalker(path string, d fs.DirEntry, err error) error {
 	}
 	defer file.Close()
 
-	var fm = make(map[string]any)
+	var fm = make(Store)
 	var content []byte
 
 	if !b.skipFrontmatter {

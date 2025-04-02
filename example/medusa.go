@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"log/slog"
+	"os"
 
 	"git.sr.ht/~relay/medusa"
 	"git.sr.ht/~relay/medusa/transformers/collections"
@@ -16,7 +19,7 @@ func main() {
 		Logger: slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		})),
-		AutoConfirm: true,
+		AllowOverwrite: true,
 	}
 
 	b := medusa.NewBuilder(config)
@@ -47,6 +50,13 @@ func main() {
 
 	err := b.Build()
 	if err != nil {
-		panic(err)
+		if errors.Is(err, medusa.ErrDestinationExists) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Please remove the destination directory or set AllowOverwrite to true.\n")
+			os.Exit(1)
+		} else {
+			log.Fatalf("Build failed: %v", err)
+		}
 	}
+
 }

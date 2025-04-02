@@ -16,7 +16,7 @@ type Config struct {
 	// "overwrite warnings" should be skipped.
 	//
 	// Optional. Defaults to false.
-	AutoConfirm bool
+	AllowOverwrite bool
 
 	// Defines which logger to use.
 	//

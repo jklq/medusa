@@ -35,7 +35,7 @@ booleans, nil for pointers, "" for strings), with specific overrides in
 			Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 				Level: slog.LevelDebug,
 			})),
-			AutoConfirm: true, // Skip overwrite prompts
+			AllowOverwrite: true, // Skip overwrite prompts
 		}
 		b := medusa.NewBuilder(config)
 
