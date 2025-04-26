@@ -3,6 +3,7 @@ package medusa
 import (
 	"errors" // Added for errors.Is and defining new error types
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -181,7 +182,12 @@ func (b *Builder) writeFiles() error {
 			return fmt.Errorf("failed to create directory %s: %w", writeDir, err)
 		}
 
-		err = os.WriteFile(writePath, file.content, file.FileInfo.Mode().Perm())
+		var perm fs.FileMode = 0644
+		if file.FileInfo != nil {
+			perm = file.FileInfo.Mode().Perm()
+		}
+
+		err = os.WriteFile(writePath, file.content, perm)
 		if err != nil {
 			b.log.Error("Failed to write file content", "file_path", writePath, "error", err)
 			return fmt.Errorf("failed to write file %s: %w", writePath, err)
